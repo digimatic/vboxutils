@@ -91,15 +91,21 @@ class VBoxData:
             # Start of new section
             m = re.match(r'\[([\s\w)]+)\]', line)
             if m is not None:
+                if section == 'column names':
+                    self.column_names.append('time_of_day') # time converted into secs
+                    self.column_names.append('datetime')    # absolute time
+                    self.column_names.append('timestamp')   # absolute time in secs
+                    self.column_names.append('lat_deg')     # latitude in degrees
+                    self.column_names.append('long_deg')    # longitude in degrees
+                    VBoxDataTuple = collections.namedtuple('VBoxDataTuple', self.column_names)
                 section = m.group(1)
-
             else:
                 # We're within a section
-                                
+
                 if (section is None) and line.startswith('File created on'):
                     # Will parse this at some point
                     creation_date = line[16:]
-                    self.creation_date = datetime.strptime(creation_date, "%d/%m/%Y @ %H:%M:%S")
+                    self.creation_date = datetime.strptime(creation_date, "%d/%m/%Y @ %H:%M")
                     self.creation_midnight = self.creation_date.replace(hour=0, minute=0, second=0, microsecond=0)
 
                 if line and (section == 'header'):
@@ -109,18 +115,7 @@ class VBoxData:
                     self.comments.append(line)
 
                 if line and (section == 'column names'):
-                    # To use the columns as field names in named tuples, we need to replace hyphens
-                    self.column_names = [c.replace('-','_') for c in line.split()]
-                    self.column_name_map = dict([k[::-1] for k in enumerate(self.column_names)])
-                    assert(self.column_names[1] == 'time')  # We assume this later
-                    assert(self.column_names[2] == 'lat')   # We assume this later
-                    assert(self.column_names[3] == 'long')  # We assume this later
-                    self.column_names.append('time_of_day') # time converted into secs
-                    self.column_names.append('datetime')    # absolute time
-                    self.column_names.append('timestamp')   # absolute time in secs
-                    self.column_names.append('lat_deg')     # latitude in degrees
-                    self.column_names.append('long_deg')    # longitude in degrees
-                    VBoxDataTuple = collections.namedtuple('VBoxDataTuple', self.column_names)
+                     self.column_names.append(line.replace('-','_').replace('.','_'))
 
                 if line and (section == 'data'):
                     bits = line.split()
@@ -160,11 +155,9 @@ class VBoxData:
                     # We assume that time=000000.00 indicates the start of useful data.
                     # (This comes from an early test file where the first few records
                     # were at 23:59:xx.xxx.)
-                    if fields[1] == 0.0:
-                        self.data = []
-
-                    tup = VBoxDataTuple(*fields)
-                    self.data.append(tup)
+                    if fields[2] != 0.0:
+                        tup = VBoxDataTuple(*fields)
+                        self.data.append(tup)
 
         self.min_lat = min([d.lat_deg for d in self.data])
         self.max_lat = max([d.lat_deg for d in self.data])
@@ -235,7 +228,7 @@ class VBoxData:
         fig = plt.figure()
         plt.title('Track')
         ax = plt.gca()
-        ax.set_axis_bgcolor((0.1,0.1,0.1))
+        ax.set_facecolor((0.1,0.1,0.1))
         max_vel = max([d.velocity for d in self.data])
         if max_vel == 0:
             click.echo("No movement detected!", err=True)

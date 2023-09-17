@@ -20,11 +20,11 @@ from vbox import VBoxData
 @click.option('--gpx',   '-p', default=None, type=click.File('w'), help="Output a GPX file")
 @click.option('--csv',   '-c', default=None, type=click.File('w'), help="Output a CSV file")
 @click.option('--geo',   '-g', default=None, type=click.File('w'), help="Output a GeoJSON file")
-@click.argument('vbo_file', type=click.File('r'))
+@click.argument('vbo_file', type=click.File('r', encoding="ISO-8859-1"))
 
 def main(graph, track, gpx, csv, geo, vbo_file):
     vbd = VBoxData(vbo_file)
-    print >>sys.stderr, len(vbd.data),"points"
+    print(f"{len(vbd.data)} points",file=sys.stderr)
 
     if gpx:
         vbd.write_gpx(gpx)
